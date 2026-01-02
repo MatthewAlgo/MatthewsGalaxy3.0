@@ -1,0 +1,144 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository_owner }}/matthewsgalaxy
+
+jobs:
+  # ============================================
+  # Deploy to Staging (automatic on develop)
+  # ============================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' || inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://staging.matthewsgalaxy.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_SSH_KEY }}
+          script: |
+            cd /opt/matthewsgalaxy
+            
+            # Pull latest images
+            docker compose pull
+            
+            # Deploy with zero downtime
+            docker compose up -d --remove-orphans
+            
+            # Wait for services
+            sleep 10
+            
+            # Health check
+            curl -f http://localhost:8080/health || exit 1
+            curl -f http://localhost:3000 || exit 1
+            
+            # Cleanup old images
+            docker image prune -f
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Staging deployment successful!"
+
+  # ============================================
+  # Deploy to Production (manual approval)
+  # ============================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || inputs.environment == 'production'
+    environment:
+      name: production
+      url: https://matthewsgalaxy.com
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PRODUCTION_HOST }}
+          username: ${{ secrets.PRODUCTION_USER }}
+          key: ${{ secrets.PRODUCTION_SSH_KEY }}
+          script: |
+            cd /opt/matthewsgalaxy
+            
+            # Backup current state
+            docker compose exec -T postgres pg_dump -U matthew matthewsgalaxy > backup_$(date +%Y%m%d_%H%M%S).sql
+            
+            # Pull latest images
+            docker compose pull
+            
+            # Deploy with zero downtime
+            docker compose up -d --remove-orphans
+            
+            # Wait for services
+            sleep 15
+            
+            # Health check
+            curl -f http://localhost:8080/health || exit 1
+            curl -f http://localhost:3000 || exit 1
+            
+            # Keep only last 5 backups
+            ls -t backup_*.sql | tail -n +6 | xargs -r rm
+            
+            # Cleanup old images
+            docker image prune -f
+
+      - name: Notify success
+        if: success()
+        run: echo "✅ Production deployment successful!"
+
+  # ============================================
+  # Post-deployment verification
+  # ============================================
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    if: always() && needs.deploy-production.result == 'success'
+
+    steps:
+      - name: Wait for propagation
+        run: sleep 30
+
+      - name: Check API health
+        run: |
+          curl -f https://api.matthewsgalaxy.com/health || exit 1
+          echo "✅ API is healthy"
+
+      - name: Check frontend
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://matthewsgalaxy.com)
+          if [ "$response" != "200" ]; then
+            echo "❌ Frontend returned $response"
+            exit 1
+          fi
+          echo "✅ Frontend is accessible"
+
+      - name: Notify deployment complete
+        run: echo "🚀 Deployment verification complete!"
