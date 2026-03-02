@@ -1,0 +1,5 @@
+	github.com/matthewsgalaxy/backend/cmd/server		coverage: 0.0% of statements
+	github.com/matthewsgalaxy/backend/internal/database		coverage: 0.0% of statements
+ok  	github.com/matthewsgalaxy/backend/internal/handlers	0.426s	coverage: 22.4% of statements
+ok  	github.com/matthewsgalaxy/backend/internal/middleware	0.721s	coverage: 93.2% of statements
+ok  	github.com/matthewsgalaxy/backend/internal/models	1.025s	coverage: 100.0% of statements

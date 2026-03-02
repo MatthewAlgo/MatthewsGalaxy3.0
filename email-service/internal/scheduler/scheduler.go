@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+	"github.com/matthewsgalaxy/email-service/internal/config"
 	"github.com/matthewsgalaxy/email-service/internal/sender"
 	"github.com/matthewsgalaxy/email-service/internal/templates"
 )
@@ -38,10 +39,10 @@ type Scheduler struct {
 
 // NewScheduler creates a new post scanner and email scheduler
 func NewScheduler() (*Scheduler, error) {
-	// Connect to database
+	// Connect to database (fail-fast if DATABASE_URL not set)
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://user:password@localhost:5432/matthewsgalaxy?sslmode=disable"
+		return nil, fmt.Errorf("FATAL: DATABASE_URL environment variable is required but not set")
 	}
 
 	db, err := sqlx.Connect("postgres", databaseURL)
@@ -60,8 +61,8 @@ func NewScheduler() (*Scheduler, error) {
 		emailSender:  sender.NewEmailSender(),
 		scanInterval: time.Duration(intervalSeconds) * time.Second,
 		lastScanTime: time.Now().Add(-time.Duration(intervalSeconds) * time.Second),
-		frontendURL:  getEnvOrDefault("FRONTEND_URL", "http://localhost:3000"),
-		backendURL:   getEnvOrDefault("BACKEND_URL", "http://localhost:8080"),
+		frontendURL:  config.GetEnvOrDefault("FRONTEND_URL", "http://localhost:3000"),
+		backendURL:   config.GetEnvOrDefault("BACKEND_URL", "http://localhost:8080"),
 	}, nil
 }
 
@@ -179,11 +180,4 @@ func (s *Scheduler) Close() {
 	if s.db != nil {
 		s.db.Close()
 	}
-}
-
-func getEnvOrDefault(key, defaultVal string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return defaultVal
 }

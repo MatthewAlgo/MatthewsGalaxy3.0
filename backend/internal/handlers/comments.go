@@ -77,7 +77,11 @@ func CreateComment(c *gin.Context) {
 
 	// Get user info for response
 	var user models.User
-	database.DB.Get(&user, "SELECT * FROM users WHERE id = $1", userID)
+	if err := database.DB.Get(&user, "SELECT * FROM users WHERE id = $1", userID); err != nil {
+		// Comment was created but we can't enrich with user data — return comment alone
+		c.JSON(http.StatusCreated, comment)
+		return
+	}
 
 	response := models.CommentWithUser{
 		Comment:       comment,

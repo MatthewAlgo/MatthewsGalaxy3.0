@@ -2,31 +2,13 @@ package handlers
 
 import (
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/google/uuid"
 	"github.com/matthewsgalaxy/backend/internal/database"
+	"github.com/matthewsgalaxy/backend/internal/middleware"
 	"github.com/matthewsgalaxy/backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Email  string    `json:"email"`
-	Role   string    `json:"role"`
-	jwt.RegisteredClaims
-}
-
-func getJWTSecret() []byte {
-	secret := os.Getenv("JWT_SECRET")
-	if secret == "" {
-		secret = "your-secret-key"
-	}
-	return []byte(secret)
-}
 
 // Register creates a new user account
 func Register(c *gin.Context) {
@@ -70,7 +52,7 @@ func Register(c *gin.Context) {
 	}
 
 	// Generate token
-	token, err := generateToken(user.ID, user.Email, user.Role)
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -102,7 +84,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, err := generateToken(user.ID, user.Email, user.Role)
+	token, err := middleware.GenerateToken(user.ID, user.Email, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate token"})
 		return
@@ -169,19 +151,4 @@ func UpdateProfile(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, user.ToResponse())
-}
-
-func generateToken(userID uuid.UUID, email, role string) (string, error) {
-	claims := &Claims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(getJWTSecret())
 }

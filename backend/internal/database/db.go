@@ -12,11 +12,12 @@ import (
 
 var DB *sqlx.DB
 
-// Connect establishes a connection to the PostgreSQL database
+// Connect establishes a connection to the PostgreSQL database.
+// It crashes if DATABASE_URL is not set (fail-fast to prevent insecure defaults).
 func Connect() error {
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		databaseURL = "postgres://user:password@localhost:5432/matthewsgalaxy?sslmode=disable"
+		return fmt.Errorf("FATAL: DATABASE_URL environment variable is required but not set")
 	}
 
 	var err error

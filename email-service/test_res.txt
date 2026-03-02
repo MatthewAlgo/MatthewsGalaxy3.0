@@ -1,0 +1,5 @@
+	github.com/matthewsgalaxy/email-service/cmd/service		coverage: 0.0% of statements
+ok  	github.com/matthewsgalaxy/email-service/internal/config	(cached)	coverage: 100.0% of statements
+ok  	github.com/matthewsgalaxy/email-service/internal/scheduler	(cached)	coverage: 0.0% of statements
+ok  	github.com/matthewsgalaxy/email-service/internal/sender	(cached)	coverage: 16.7% of statements
+ok  	github.com/matthewsgalaxy/email-service/internal/templates	(cached)	coverage: 77.8% of statements

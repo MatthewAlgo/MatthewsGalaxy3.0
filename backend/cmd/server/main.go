@@ -12,6 +12,9 @@ import (
 )
 
 func main() {
+	// Validate critical environment variables (fail-fast)
+	middleware.InitJWTSecret()
+
 	// Connect to database
 	if err := database.Connect(); err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -97,6 +100,9 @@ func main() {
 
 			// Subscribers
 			admin.GET("/subscribers", handlers.GetSubscribers)
+
+			// Email logs
+			admin.GET("/email-logs", handlers.GetEmailLogs)
 		}
 	}
 

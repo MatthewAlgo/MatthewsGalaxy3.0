@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Check for existing token
         const token = api.getToken();
         if (token) {
-            api.getCurrentUser().then(({ data, error }) => {
+            api.getCurrentUser().then(({ data }) => {
                 if (data) {
                     setUser(data);
                 } else {
@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setLoading(false);
             });
         } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setLoading(false);
         }
     }, []);

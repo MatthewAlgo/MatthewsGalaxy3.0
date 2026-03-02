@@ -70,7 +70,10 @@ func GetLikeStatus(c *gin.Context) {
 
 	// Get like count
 	var likeCount int
-	database.DB.Get(&likeCount, "SELECT COUNT(*) FROM likes WHERE post_id = $1", postID)
+	if err := database.DB.Get(&likeCount, "SELECT COUNT(*) FROM likes WHERE post_id = $1", postID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch like count"})
+		return
+	}
 
 	response := gin.H{
 		"count": likeCount,
@@ -81,9 +84,12 @@ func GetLikeStatus(c *gin.Context) {
 	userID, exists := c.Get("userID")
 	if exists {
 		var liked bool
-		database.DB.Get(&liked,
+		if err := database.DB.Get(&liked,
 			"SELECT EXISTS(SELECT 1 FROM likes WHERE post_id = $1 AND user_id = $2)",
-			postID, userID)
+			postID, userID); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check like status"})
+			return
+		}
 		response["liked"] = liked
 	}
 

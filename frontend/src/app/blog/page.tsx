@@ -21,6 +21,7 @@ export default function BlogPage() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadPosts(page);
     }, [page]);
 
