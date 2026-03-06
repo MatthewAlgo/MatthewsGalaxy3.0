@@ -24,7 +24,9 @@ func main() {
 	// Simple health check server
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"status": "ok", "service": "matthewsgalaxy-email"}`))
+		if _, err := w.Write([]byte(`{"status": "ok", "service": "matthewsgalaxy-email"}`)); err != nil {
+			log.Printf("Failed to write health response: %v", err)
+		}
 	})
 
 	port := os.Getenv("PORT")
