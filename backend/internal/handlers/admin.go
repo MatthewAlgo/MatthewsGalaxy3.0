@@ -13,31 +13,39 @@ import (
 func GetDashboardStats(c *gin.Context) {
 	var stats models.DashboardStats
 
-	database.DB.Get(&stats.TotalUsers, "SELECT COUNT(*) FROM users")
-	database.DB.Get(&stats.TotalPosts, "SELECT COUNT(*) FROM posts")
-	database.DB.Get(&stats.TotalComments, "SELECT COUNT(*) FROM comments")
-	database.DB.Get(&stats.TotalLikes, "SELECT COUNT(*) FROM likes")
-	database.DB.Get(&stats.TotalSubscribers, "SELECT COUNT(*) FROM subscriptions WHERE active = true")
+	if err := database.DB.Get(&stats.TotalUsers, "SELECT COUNT(*) FROM users"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch user stats"})
+		return
+	}
+	if err := database.DB.Get(&stats.TotalPosts, "SELECT COUNT(*) FROM posts"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch post stats"})
+		return
+	}
+	if err := database.DB.Get(&stats.TotalComments, "SELECT COUNT(*) FROM comments"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch comment stats"})
+		return
+	}
+	if err := database.DB.Get(&stats.TotalLikes, "SELECT COUNT(*) FROM likes"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch like stats"})
+		return
+	}
+	if err := database.DB.Get(&stats.TotalSubscribers, "SELECT COUNT(*) FROM subscriptions WHERE active = true"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch subscriber stats"})
+		return
+	}
 
 	c.JSON(http.StatusOK, stats)
 }
 
 // GetAllUsers returns all users for admin
 func GetAllUsers(c *gin.Context) {
-	page := 1
-	limit := 20
-
-	if p := c.Query("page"); p != "" {
-		page = max(1, parseInt(p))
-	}
-	if l := c.Query("limit"); l != "" {
-		limit = min(100, max(1, parseInt(l)))
-	}
-
-	offset := (page - 1) * limit
+	page, limit, offset := parsePagination(c, 20)
 
 	var total int
-	database.DB.Get(&total, "SELECT COUNT(*) FROM users")
+	if err := database.DB.Get(&total, "SELECT COUNT(*) FROM users"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count users"})
+		return
+	}
 
 	var users []models.User
 	err := database.DB.Select(&users,
@@ -55,15 +63,7 @@ func GetAllUsers(c *gin.Context) {
 		responses[i] = user.ToResponse()
 	}
 
-	totalPages := (total + limit - 1) / limit
-
-	c.JSON(http.StatusOK, models.PaginatedResponse{
-		Data:       responses,
-		Page:       page,
-		Limit:      limit,
-		Total:      total,
-		TotalPages: totalPages,
-	})
+	c.JSON(http.StatusOK, buildPaginatedResponse(responses, page, limit, total))
 }
 
 // DeleteUser deletes a user (admin only, cannot delete self or other admins)
@@ -135,4 +135,27 @@ func UpdateUserRole(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Role updated successfully"})
+}
+
+// GetEmailLogs returns paginated email delivery logs (admin only)
+func GetEmailLogs(c *gin.Context) {
+	page, limit, offset := parsePagination(c, 50)
+
+	var total int
+	if err := database.DB.Get(&total, "SELECT COUNT(*) FROM email_logs"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count email logs"})
+		return
+	}
+
+	var logs []models.EmailLog
+	err := database.DB.Select(&logs,
+		"SELECT * FROM email_logs ORDER BY sent_at DESC LIMIT $1 OFFSET $2",
+		limit, offset)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch email logs"})
+		return
+	}
+
+	c.JSON(http.StatusOK, buildPaginatedResponse(logs, page, limit, total))
 }

@@ -5,34 +5,19 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/matthewsgalaxy/backend/internal/middleware"
 	"github.com/matthewsgalaxy/backend/internal/models"
 )
 
 func init() {
 	gin.SetMode(gin.TestMode)
-}
-
-// createTestTokenForHandlers creates a valid JWT for testing handlers
-func createTestTokenForHandlers(userID uuid.UUID, email, role string) string {
-	claims := &Claims{
-		UserID: userID,
-		Email:  email,
-		Role:   role,
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, _ := token.SignedString(getJWTSecret())
-	return tokenString
+	os.Setenv("JWT_SECRET", "test-secret-key-that-is-long-enough-for-testing")
+	middleware.InitJWTSecret()
 }
 
 func TestRegister_InvalidJSON(t *testing.T) {
@@ -145,28 +130,20 @@ func TestGenerateToken_CreatesValidToken(t *testing.T) {
 	email := "test@example.com"
 	role := "admin"
 
-	token, err := generateToken(userID, email, role)
+	token, err := middleware.GenerateToken(userID, email, role)
 
 	if err != nil {
-		t.Fatalf("generateToken returned error: %v", err)
+		t.Fatalf("GenerateToken returned error: %v", err)
 	}
 
 	if token == "" {
 		t.Error("Expected non-empty token")
 	}
 
-	// Verify the token can be parsed
-	claims := &Claims{}
-	parsedToken, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (interface{}, error) {
-		return getJWTSecret(), nil
-	})
-
+	// Verify the token can be parsed by middleware
+	claims, err := middleware.ParseToken(token)
 	if err != nil {
 		t.Fatalf("Failed to parse generated token: %v", err)
-	}
-
-	if !parsedToken.Valid {
-		t.Error("Generated token is not valid")
 	}
 
 	if claims.UserID != userID {

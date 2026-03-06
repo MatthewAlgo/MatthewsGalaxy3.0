@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/matthewsgalaxy/email-service/internal/config"
 	"gopkg.in/gomail.v2"
 )
 
@@ -25,11 +26,11 @@ func NewEmailSender() *EmailSender {
 	}
 
 	return &EmailSender{
-		host:     getEnvOrDefault("SMTP_HOST", "smtp.gmail.com"),
+		host:     config.GetEnvOrDefault("SMTP_HOST", "smtp.gmail.com"),
 		port:     port,
 		username: os.Getenv("SMTP_USER"),
 		password: os.Getenv("SMTP_PASSWORD"),
-		from:     getEnvOrDefault("FROM_EMAIL", "noreply@matthewsgalaxy.com"),
+		from:     config.GetEnvOrDefault("FROM_EMAIL", "noreply@matthewsgalaxy.com"),
 	}
 }
 
@@ -42,7 +43,12 @@ func (s *EmailSender) SendEmail(to, subject, htmlBody string) error {
 	m.SetBody("text/html", htmlBody)
 
 	d := gomail.NewDialer(s.host, s.port, s.username, s.password)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	// Only skip TLS verification if explicitly opted in via environment variable
+	if os.Getenv("SMTP_TLS_SKIP_VERIFY") == "true" {
+		log.Println("WARNING: SMTP TLS verification is disabled via SMTP_TLS_SKIP_VERIFY")
+		d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
 
 	if err := d.DialAndSend(m); err != nil {
 		log.Printf("Failed to send email to %s: %v", to, err)
@@ -65,11 +71,4 @@ func (s *EmailSender) SendBulkEmails(recipients []string, subject string, htmlBo
 	}
 
 	return errors
-}
-
-func getEnvOrDefault(key, defaultVal string) string {
-	if val := os.Getenv(key); val != "" {
-		return val
-	}
-	return defaultVal
 }

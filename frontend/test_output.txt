@@ -1,0 +1,53 @@
+
+> frontend@0.1.0 test
+> jest --coverage
+
+PASS src/components/__tests__/SubscribeForm.test.tsx
+PASS src/components/__tests__/PostCard.test.tsx
+PASS src/lib/__tests__/auth.test.tsx
+PASS src/components/__tests__/Header.test.tsx
+PASS src/components/__tests__/Footer.test.tsx
+PASS src/components/__tests__/StarBackground.test.tsx
+PASS src/lib/__tests__/api.test.ts
+----------------------|---------|----------|---------|---------|-------------------------------
+File                  | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s             
+----------------------|---------|----------|---------|---------|-------------------------------
+All files             |   32.19 |    20.93 |    28.9 |   33.55 |                               
+ app                  |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-78                          
+ app/about            |       0 |      100 |       0 |       0 |                               
+  page.tsx            |       0 |      100 |       0 |       0 | 1-8                           
+ app/admin            |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-239                         
+ app/admin/posts/[id] |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-152                         
+ app/admin/posts/new  |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-119                         
+ app/auth/login       |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-63                          
+ app/auth/register    |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-84                          
+ app/blog             |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-68                          
+ app/blog/[slug]      |       0 |        0 |       0 |       0 |                               
+  page.tsx            |       0 |        0 |       0 |       0 | 3-196                         
+ components           |   89.01 |    84.61 |   77.27 |    90.9 |                               
+  Footer.tsx          |     100 |      100 |     100 |     100 |                               
+  Header.tsx          |   66.66 |      100 |   42.85 |   66.66 | 29,35-54                      
+  PostCard.tsx        |     100 |      100 |     100 |     100 |                               
+  StarBackground.tsx  |   92.45 |       50 |     100 |      96 | 80-81                         
+  SubscribeForm.tsx   |      90 |    88.88 |      75 |      90 | 27-28                         
+ lib                  |   85.36 |    69.69 |   64.51 |   85.18 |                               
+  api.ts              |   74.41 |    60.86 |   54.16 |    73.8 | 82-86,103,114-121,144,155-178 
+  auth.tsx            |   97.43 |       90 |     100 |   97.43 | 58                            
+----------------------|---------|----------|---------|---------|-------------------------------
+Jest: "global" coverage threshold for statements (60%) not met: 32.19%
+Jest: "global" coverage threshold for branches (60%) not met: 20.93%
+Jest: "global" coverage threshold for lines (60%) not met: 33.55%
+Jest: "global" coverage threshold for functions (60%) not met: 28.9%
+
+Test Suites: 7 passed, 7 total
+Tests:       95 passed, 95 total
+Snapshots:   0 total
+Time:        1.556 s
+Ran all test suites.

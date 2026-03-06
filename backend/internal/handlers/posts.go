@@ -11,24 +11,47 @@ import (
 	"github.com/matthewsgalaxy/backend/internal/models"
 )
 
-// GetPosts returns paginated published posts
-func GetPosts(c *gin.Context) {
-	page := 1
-	limit := 10
+// parsePagination extracts page, limit, and offset from query parameters.
+// This is the single source of truth for pagination logic — do not duplicate.
+func parsePagination(c *gin.Context, defaultLimit int) (page, limit, offset int) {
+	page = 1
+	limit = defaultLimit
 
 	if p := c.Query("page"); p != "" {
-		if _, err := c.GetQuery("page"); err {
-			page = max(1, parseInt(p))
-		}
+		page = max(1, parseInt(p))
 	}
 	if l := c.Query("limit"); l != "" {
-		limit = min(50, max(1, parseInt(l)))
+		limit = min(100, max(1, parseInt(l)))
 	}
 
-	offset := (page - 1) * limit
+	offset = (page - 1) * limit
+	return
+}
+
+// buildPaginatedResponse creates a PaginatedResponse with computed total pages.
+func buildPaginatedResponse(data interface{}, page, limit, total int) models.PaginatedResponse {
+	totalPages := 0
+	if limit > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+	return models.PaginatedResponse{
+		Data:       data,
+		Page:       page,
+		Limit:      limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+}
+
+// GetPosts returns paginated published posts
+func GetPosts(c *gin.Context) {
+	page, limit, offset := parsePagination(c, 10)
 
 	var total int
-	database.DB.Get(&total, "SELECT COUNT(*) FROM posts WHERE published = true")
+	if err := database.DB.Get(&total, "SELECT COUNT(*) FROM posts WHERE published = true"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count posts"})
+		return
+	}
 
 	var posts []models.PostWithAuthor
 	query := `
@@ -47,15 +70,7 @@ func GetPosts(c *gin.Context) {
 		return
 	}
 
-	totalPages := (total + limit - 1) / limit
-
-	c.JSON(http.StatusOK, models.PaginatedResponse{
-		Data:       posts,
-		Page:       page,
-		Limit:      limit,
-		Total:      total,
-		TotalPages: totalPages,
-	})
+	c.JSON(http.StatusOK, buildPaginatedResponse(posts, page, limit, total))
 }
 
 // GetPostBySlug returns a single post by slug
@@ -121,7 +136,10 @@ func CreatePost(c *gin.Context) {
 
 	// Ensure unique slug
 	var count int
-	database.DB.Get(&count, "SELECT COUNT(*) FROM posts WHERE slug LIKE $1", slug+"%")
+	if err := database.DB.Get(&count, "SELECT COUNT(*) FROM posts WHERE slug LIKE $1", slug+"%"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check slug uniqueness"})
+		return
+	}
 	if count > 0 {
 		slug = slug + "-" + uuid.New().String()[:8]
 	}
@@ -205,20 +223,13 @@ func DeletePost(c *gin.Context) {
 
 // GetAllPosts returns all posts for admin
 func GetAllPosts(c *gin.Context) {
-	page := 1
-	limit := 20
-
-	if p := c.Query("page"); p != "" {
-		page = max(1, parseInt(p))
-	}
-	if l := c.Query("limit"); l != "" {
-		limit = min(100, max(1, parseInt(l)))
-	}
-
-	offset := (page - 1) * limit
+	page, limit, offset := parsePagination(c, 20)
 
 	var total int
-	database.DB.Get(&total, "SELECT COUNT(*) FROM posts")
+	if err := database.DB.Get(&total, "SELECT COUNT(*) FROM posts"); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count posts"})
+		return
+	}
 
 	var posts []models.PostWithAuthor
 	query := `
@@ -236,15 +247,7 @@ func GetAllPosts(c *gin.Context) {
 		return
 	}
 
-	totalPages := (total + limit - 1) / limit
-
-	c.JSON(http.StatusOK, models.PaginatedResponse{
-		Data:       posts,
-		Page:       page,
-		Limit:      limit,
-		Total:      total,
-		TotalPages: totalPages,
-	})
+	c.JSON(http.StatusOK, buildPaginatedResponse(posts, page, limit, total))
 }
 
 func generateSlug(title string) string {

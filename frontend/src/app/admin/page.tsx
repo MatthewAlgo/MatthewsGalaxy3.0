@@ -22,12 +22,6 @@ export default function AdminPage() {
         }
     }, [authLoading, isAdmin, router]);
 
-    useEffect(() => {
-        if (isAdmin) {
-            loadData();
-        }
-    }, [isAdmin]);
-
     const loadData = async () => {
         setLoading(true);
 
@@ -45,6 +39,13 @@ export default function AdminPage() {
 
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (isAdmin) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            loadData();
+        }
+    }, [isAdmin]);
 
     const handleDeletePost = async (id: string) => {
         if (!confirm('Are you sure you want to delete this post?')) return;
