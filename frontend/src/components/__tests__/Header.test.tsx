@@ -2,13 +2,21 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Header from '../Header';
 import { AuthContext } from '@/lib/auth';
+import { User } from '@/lib/api';
 
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
     useRouter: () => ({ push: mockPush }),
 }));
 
-const mockAuthContext = {
+const mockAuthContext: {
+    user: User | null;
+    loading: boolean;
+    isAdmin: boolean;
+    login: jest.Mock;
+    register: jest.Mock;
+    logout: jest.Mock;
+} = {
     user: null,
     loading: false,
     isAdmin: false,
